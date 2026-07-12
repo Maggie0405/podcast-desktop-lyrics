@@ -72,7 +72,7 @@ Apple 播客的"逐字稿"面板会随音频**逐句高亮**。程序通过 macO
 ### 一键安装
 
 ```bash
-git clone https://github.com/USERNAME/podcast-desktop-lyrics.git
+git clone https://github.com/Maggie0405/podcast-desktop-lyrics.git
 cd podcast-desktop-lyrics
 bash scripts/install.sh
 ```
