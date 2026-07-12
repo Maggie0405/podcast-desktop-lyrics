@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "podcast-desktop-lyrics"
+version = "0.1.0"
+description = "把 Apple 播客的逐字稿像桌面歌词一样悬浮显示在 macOS 屏幕上"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "maggie" }]
+keywords = ["macos", "podcast", "lyrics", "transcript", "apple-podcasts", "overlay"]
+classifiers = [
+    "Environment :: MacOS X :: Cocoa",
+    "Operating System :: MacOS :: MacOS X",
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Multimedia :: Sound/Audio",
+]
+dependencies = [
+    # Cocoa 桥接(AppKit / Foundation / ApplicationServices 都由它提供)
+    "pyobjc-framework-Cocoa>=9.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/USERNAME/podcast-desktop-lyrics"
+Repository = "https://github.com/USERNAME/podcast-desktop-lyrics"
+Issues = "https://github.com/USERNAME/podcast-desktop-lyrics/issues"
+
+[project.scripts]
+podcast-lyrics = "podcast_desktop_lyrics.app:main"
+
+[tool.setuptools]
+packages = ["podcast_desktop_lyrics"]

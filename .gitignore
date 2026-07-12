@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+
+# macOS
+.DS_Store
+
+# 本地缓存的调试用 TTML / dump
+*.ttml
+ax_dump.txt
