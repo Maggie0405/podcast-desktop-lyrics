@@ -70,11 +70,22 @@ Apple 播客的"逐字稿"面板会随音频**逐句高亮**。程序通过 macO
 - macOS，Python 3.9+
 - [`media-control`](https://formulae.brew.sh/formula/media-control)（识别正在播放哪一集）
 
-### 一键安装
+### 方式一：打包成独立 .app（推荐，免终端、授权最省心）
 
 ```bash
 git clone https://github.com/Maggie0405/podcast-desktop-lyrics.git
 cd podcast-desktop-lyrics
+brew install media-control
+bash scripts/build_app.sh
+```
+
+产物在 `packaging/dist/Podcast Desktop Lyrics.app`，把它拖进 `/Applications` 即可
+双击运行（自带 Python，无 Dock 图标的后台悬浮工具，用悬浮窗上的 `✕` 退出）。
+辅助功能权限直接授给这个 App（见下），比授权终端更干净。
+
+### 方式二：一键脚本安装（终端运行 + 开机自启）
+
+```bash
 bash scripts/install.sh
 ```
 
@@ -91,8 +102,9 @@ python3 -m podcast_desktop_lyrics     # 或安装后直接: podcast-lyrics
 ### 授予辅助功能权限（启用"实时"模式）
 
 **系统设置 › 隐私与安全性 › 辅助功能**，添加并勾选运行本程序的宿主：
+- **.app 方式** → 勾选 **Podcast Desktop Lyrics**（推荐，最干净）
 - 从终端运行 → 勾选你的**终端**（Terminal / iTerm）
-- 开机自启 → 勾选安装脚本里提示的 **python3 路径**
+- 开机自启脚本 → 勾选安装脚本里提示的 **python3 路径**
 
 没授权也能用，但只有"顺延"估算精度。
 
@@ -124,7 +136,8 @@ bash scripts/uninstall.sh
 
 ## 🗺 Roadmap
 
-- [ ] 打包成独立 `.app`（免终端、辅助功能授权更顺）
+- [x] 打包成独立 `.app`（免终端、辅助功能授权更顺）—— 见 `scripts/build_app.sh`
+- [ ] 给 `.app` 做签名 / 公证，并附上图标
 - [ ] 悬浮窗外观设置（字号 / 透明度 / 颜色 / 位置记忆）
 - [ ] 同时显示上一句 / 下一句
 - [ ] 可选：把广告断点校准点持久化，改善纯顺延精度

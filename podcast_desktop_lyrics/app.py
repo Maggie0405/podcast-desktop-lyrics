@@ -38,6 +38,7 @@ import glob
 import json
 import os
 import re
+import shutil
 import sqlite3
 import subprocess
 import time
@@ -224,15 +225,28 @@ class PositionSource:
         self.last_meta_poll = 0.0
         self.last_db_poll = 0.0
 
-    @staticmethod
-    def _which(cmd):
-        return subprocess.run(["which", cmd], capture_output=True).returncode == 0
+    # Finder 启动的 .app PATH 很干净, which 找不到 brew 的可执行文件,
+    # 所以除了 PATH 再显式兜底这些常见安装目录
+    _BIN_DIRS = ("/opt/homebrew/bin", "/usr/local/bin", "/opt/local/bin")
+
+    @classmethod
+    def _resolve(cls, name):
+        p = shutil.which(name)
+        if p:
+            return p
+        for d in cls._BIN_DIRS:
+            cand = os.path.join(d, name)
+            if os.path.exists(cand):
+                return cand
+        return None
 
     def _detect(self):
-        if self._which("media-control"):
-            return "media-control"
-        if self._which("nowplaying-cli"):
-            return "nowplaying-cli"
+        self.bin = None   # 选中后端的可执行文件绝对路径
+        for name in ("media-control", "nowplaying-cli"):
+            p = self._resolve(name)
+            if p:
+                self.bin = p
+                return name
         return None
 
     def _poll_meta(self):
@@ -240,7 +254,7 @@ class PositionSource:
         try:
             if self.backend == "media-control":
                 out = subprocess.run(
-                    ["media-control", "get"], capture_output=True, text=True, timeout=3
+                    [self.bin, "get"], capture_output=True, text=True, timeout=3
                 ).stdout
                 data = json.loads(out)
                 if data.get("bundleIdentifier") == "com.apple.podcasts":
