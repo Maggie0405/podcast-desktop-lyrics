@@ -28,12 +28,13 @@ OPTIONS = {
     # AppKit/Foundation 由 py2app 的 pyobjc recipe 处理; ApplicationServices(AX)
     # 是惰性导入, 显式列出以确保打进 bundle
     "includes": ["ApplicationServices"],
+    "iconfile": "icon.icns",   # 由 make_icon.py 生成
     "plist": {
         "CFBundleName": "Podcast Desktop Lyrics",
         "CFBundleDisplayName": "Podcast Desktop Lyrics",
         "CFBundleIdentifier": "com.maggie0405.podcast-desktop-lyrics",
-        "CFBundleVersion": "0.1.0",
-        "CFBundleShortVersionString": "0.1.0",
+        "CFBundleVersion": "0.2.0",
+        "CFBundleShortVersionString": "0.2.0",
         # 后台悬浮工具: 不占 Dock、不出菜单栏, 用悬浮窗上的 ✕ 退出
         "LSUIElement": True,
         "LSMinimumSystemVersion": "11.0",

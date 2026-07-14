@@ -47,19 +47,20 @@ import xml.etree.ElementTree as ET
 import objc
 try:
     from ApplicationServices import (
-        AXIsProcessTrusted, AXUIElementCreateApplication,
-        AXUIElementCopyAttributeValue,
+        AXIsProcessTrusted, AXIsProcessTrustedWithOptions,
+        AXUIElementCreateApplication, AXUIElementCopyAttributeValue,
+        AXUIElementPerformAction,
     )
     _AX_OK = True
 except Exception:
     _AX_OK = False
 from AppKit import (
     NSApp, NSApplication, NSAttributedString, NSBackingStoreBuffered, NSButton,
-    NSColor, NSFont, NSFontAttributeName, NSMakeRect, NSPanel, NSScreen,
-    NSStatusWindowLevel, NSStringDrawingUsesLineFragmentOrigin,
+    NSColor, NSFont, NSFontAttributeName, NSMakeRect, NSPanel, NSRunningApplication,
+    NSScreen, NSStatusWindowLevel, NSStringDrawingUsesLineFragmentOrigin,
     NSTextAlignmentCenter, NSTextField, NSWindowCollectionBehaviorCanJoinAllSpaces,
     NSWindowCollectionBehaviorFullScreenAuxiliary, NSWindowStyleMaskBorderless,
-    NSWindowStyleMaskNonactivatingPanel,
+    NSWindowStyleMaskNonactivatingPanel, NSWorkspace,
 )
 from Foundation import NSBundle, NSObject, NSTimer
 
@@ -341,6 +342,9 @@ class AXLyrics:
         self.pid = None
         self.app = None
 
+    # 播客"逐字稿"开关按钮的本地化文案关键词(AXCheckBox 的 Description)
+    TRANSCRIPT_KEYWORDS = ("听写文本", "transcript", "逐字稿")
+
     @staticmethod
     def supported():
         return _AX_OK
@@ -348,6 +352,15 @@ class AXLyrics:
     @staticmethod
     def trusted():
         return _AX_OK and AXIsProcessTrusted()
+
+    @staticmethod
+    def prompt_for_trust():
+        """弹出系统标准的辅助功能授权引导(会自动把本 app 加进列表)"""
+        if _AX_OK:
+            try:
+                AXIsProcessTrustedWithOptions({"AXTrustedCheckOptionPrompt": True})
+            except Exception:
+                pass
 
     def _get(self, el, attr):
         err, val = AXUIElementCopyAttributeValue(el, attr, None)
@@ -387,6 +400,49 @@ class AXLyrics:
                 return got
         return None
 
+    # ---------- 自动打开"逐字稿"面板 ----------
+
+    def _find_transcript_toggle(self, el, depth=0):
+        """在窗口树里找逐字稿开关(AXCheckBox, Description 命中关键词)"""
+        if el is None or depth > 60:
+            return None
+        if self._get(el, "AXRole") == "AXCheckBox":
+            desc = self._get(el, "AXDescription")
+            if isinstance(desc, str) and any(
+                k in desc.lower() for k in self.TRANSCRIPT_KEYWORDS
+            ):
+                return el
+        for child in (self._get(el, "AXChildren") or []):
+            got = self._find_transcript_toggle(child, depth + 1)
+            if got is not None:
+                return got
+        return None
+
+    def open_transcript_panel(self, pid):
+        """
+        自动按下播客的"听写文本"开关打开逐字稿面板。
+        返回 True=按下了, False=没按(已打开/找不到/无权限)。
+        打开面板会让系统下载该集 TTML 缓存, 同时使实时高亮模式可用。
+        """
+        if not self.trusted() or not pid:
+            return False
+        app = self._app_for(pid)
+        if app is None:
+            return False
+        for win in (self._get(app, "AXWindows") or []):
+            toggle = self._find_transcript_toggle(win)
+            if toggle is None:
+                continue
+            val = self._get(toggle, "AXValue")
+            if str(val) in ("1", "True", "true"):   # 已经开着
+                return False
+            try:
+                AXUIElementPerformAction(toggle, "AXPress")
+                return True
+            except Exception:
+                return False
+        return False
+
 
 # ------------------------------------------------------------------ 悬浮窗
 
@@ -404,7 +460,14 @@ class LyricsApp(NSObject):
         self.ttml_mtime = 0
         self.source = PositionSource()
         self.ax = AXLyrics()
+        self.auto_opened_eps = set()   # 已自动按过"听写文本"的集 id(每集只按一次)
+        self.last_auto_open = 0.0
+        self.podcasts_running = True   # 播客是否在运行(决定悬浮窗显隐)
         self._build_window()
+        # 未授权时弹出系统标准引导(自动把本 app 加进辅助功能列表);
+        # 更新/重装后 adhoc 签名变化会使旧授权失效, 也靠这里重新引导
+        if AXLyrics.supported() and not AXLyrics.trusted():
+            AXLyrics.prompt_for_trust()
         self._reload_ttml()
         NSTimer.scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_(
             0.3, self, "tick:", None, True
@@ -519,7 +582,45 @@ class LyricsApp(NSObject):
 
     # ---------- 定时任务 ----------
 
+    def _podcasts_alive(self):
+        apps = NSRunningApplication.runningApplicationsWithBundleIdentifier_(
+            "com.apple.podcasts")
+        return bool(apps and len(apps) > 0)
+
+    def _sync_visibility(self):
+        """悬浮窗跟随播客 App 显示/隐藏(伴随应用行为)"""
+        alive = self._podcasts_alive()
+        if alive != self.podcasts_running:
+            self.podcasts_running = alive
+            if alive:
+                self.panel.orderFrontRegardless()
+            else:
+                self.panel.orderOut_(None)
+        return alive
+
+    def _maybe_auto_open_transcript(self):
+        """在播新一集但读不到高亮句时, 自动按下播客的"听写文本"开关。
+
+        每集只自动按一次(成功后记录), 用户手动关掉面板后不再强制;
+        未找到按钮(如窗口没开)时限速重试。
+        """
+        ep = self.source.episode_id
+        if (ep is None or not self.source.playing
+                or ep in self.auto_opened_eps or not AXLyrics.trusted()):
+            return
+        now = time.monotonic()
+        if now - self.last_auto_open < 5.0:
+            return
+        self.last_auto_open = now
+        if self.ax.open_transcript_panel(self.source.pid):
+            self.auto_opened_eps.add(ep)
+            print(f"[auto] 已为 ep={ep} 打开逐字稿面板")
+
     def tick_(self, timer):
+        # 播客没在运行 -> 隐藏悬浮窗并跳过一切工作
+        if not self._sync_visibility():
+            return
+
         # 首选: 逐字稿面板开着时, 直接镜像 Apple 的高亮句(实时精确),
         # 同时用它校准偏移, 供面板关闭后顺延
         line = self.ax.current_line(self.source.pid)
@@ -529,25 +630,32 @@ class LyricsApp(NSObject):
             self.info.setStringValue_("● 实时")
             return
 
-        # 面板关闭: 用播放进度 + 上次 AX 校准出的偏移顺延字幕
+        # 读不到高亮(面板没开): 先尝试自动打开逐字稿面板
+        self.source.position()   # 刷新 playing/episode_id
+        self._maybe_auto_open_transcript()
+
+        # 兜底: 用播放进度 + 上次 AX 校准出的偏移顺延字幕
         if not self.cues:
             if not AXLyrics.trusted():
                 self._set_text(
-                    "请在 系统设置>隐私与安全性>辅助功能 里授权本程序, "
-                    "并在播客里打开该集的“逐字稿”"
+                    "未授权辅助功能: 请在 系统设置>隐私与安全性>辅助功能 里"
+                    "勾选本程序(更新/重装后需移除再重新添加)"
                 )
+                self.info.setStringValue_("未授权")
             return
         t = self.source.position() + self.auto_offset + self.offset
         text = self._cue_at(t)
         if text is not None:
             self._set_text(text)
-        if self.calibrated:
+        if not AXLyrics.trusted():
+            self.info.setStringValue_("未授权(估算)")
+        elif self.calibrated:
             tail = f" {self.offset:+.0f}s" if abs(self.offset) >= 0.5 else ""
             state = "○ 暂停" if not self.source.playing else "○ 顺延"
             self.info.setStringValue_(state + tail)
         else:
-            # 还没被 AX 校准过, 顺延会不准 —— 提示打开一次逐字稿
-            self.info.setStringValue_("打开一次逐字稿以校准")
+            # 还没被 AX 校准过, 顺延会不准 —— 等自动打开逐字稿后校准
+            self.info.setStringValue_("等待逐字稿校准")
 
     def checkNewTTML_(self, timer):
         self._reload_ttml()

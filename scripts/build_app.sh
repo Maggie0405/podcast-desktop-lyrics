@@ -25,6 +25,12 @@ else
   rm -rf "$VENDOR"
 fi
 
+# 应用图标(入库了 icon.icns; 缺失时重新生成)
+if [[ ! -f "$REPO_DIR/packaging/icon.icns" ]]; then
+  echo "==> 生成应用图标 ..."
+  (cd "$REPO_DIR/packaging" && "$PY" make_icon.py)
+fi
+
 echo "==> 清理旧产物并构建 .app ..."
 cd "$REPO_DIR/packaging"
 rm -rf build dist
