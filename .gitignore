@@ -8,6 +8,10 @@ dist/
 .venv/
 venv/
 
+# 打包产物 / 内嵌的第三方二进制(构建时从 brew 拷入)
+packaging/vendor/
+*.dmg
+
 # macOS
 .DS_Store
 

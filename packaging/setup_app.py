@@ -16,6 +16,12 @@ sys.path.insert(0, REPO_ROOT)
 from setuptools import setup
 
 APP = ["entry.py"]
+
+# 注意: media-control 不通过 py2app 打包 —— py2app 会对 bundle 内所有二进制
+# 重新 adhoc 签名, 而 MediaRemoteAdapter.framework 依赖其原始签名访问私有
+# MediaRemote API, 重签后会失效。改由 build_app.sh 在 py2app 完成后原样拷入,
+# 再对外层做一次"非深度"重签。
+
 OPTIONS = {
     "argv_emulation": False,
     "packages": ["podcast_desktop_lyrics"],

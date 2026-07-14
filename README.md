@@ -65,44 +65,41 @@ Apple 播客的"逐字稿"面板会随音频**逐句高亮**。程序通过 macO
 
 ## 📦 安装 / Install
 
-### 依赖
+### 方式一：下载安装包（推荐，零终端、零依赖）
 
-- macOS，Python 3.9+
-- [`media-control`](https://formulae.brew.sh/formula/media-control)（识别正在播放哪一集）
+前往 **[Releases](https://github.com/Maggie0405/podcast-desktop-lyrics/releases/latest)**
+下载 `PodcastDesktopLyrics-<版本>.dmg`，打开后把 **Podcast Desktop Lyrics** 拖进「应用程序」。
 
-### 方式一：打包成独立 .app（推荐，免终端、授权最省心）
+- **App 已自带 Python 和 media-control，无需再安装任何东西**
+- 首次打开若提示无法验证开发者：**右键 App › 打开**，或到 系统设置 › 隐私与安全性 点『仍要打开』
+- 到 **系统设置 › 隐私与安全性 › 辅助功能** 勾选 **Podcast Desktop Lyrics**（启用与播客 App 一致的实时精度）
+- 无 Dock 图标的后台悬浮工具，用悬浮窗上的 `✕` 退出
+
+> 未签名/未公证，所以首次要手动放行；这是免费无开发者账号时的正常现象。
+
+### 方式二：从源码构建 .app
 
 ```bash
 git clone https://github.com/Maggie0405/podcast-desktop-lyrics.git
 cd podcast-desktop-lyrics
-brew install media-control
-bash scripts/build_app.sh
+brew install media-control      # 构建时需要, 会被原样打进 .app
+bash scripts/build_app.sh       # 产物: packaging/dist/Podcast Desktop Lyrics.app
+bash scripts/build_dmg.sh       # 可选: 打成 packaging/dist/*.dmg
 ```
 
-产物在 `packaging/dist/Podcast Desktop Lyrics.app`，把它拖进 `/Applications` 即可
-双击运行（自带 Python，无 Dock 图标的后台悬浮工具，用悬浮窗上的 `✕` 退出）。
-辅助功能权限直接授给这个 App（见下），比授权终端更干净。
-
-### 方式二：一键脚本安装（终端运行 + 开机自启）
+### 方式三：脚本 / 手动（终端运行 + 开机自启）
 
 ```bash
-bash scripts/install.sh
-```
-
-脚本会：装 `media-control` → `pip install` 本包 → 注册开机自启（LaunchAgent）。
-
-### 手动
-
-```bash
-brew install media-control
-pip install .
-python3 -m podcast_desktop_lyrics     # 或安装后直接: podcast-lyrics
+bash scripts/install.sh         # 装 media-control + pip 安装 + 注册开机自启
+# 或手动:
+brew install media-control && pip install .
+python3 -m podcast_desktop_lyrics
 ```
 
 ### 授予辅助功能权限（启用"实时"模式）
 
 **系统设置 › 隐私与安全性 › 辅助功能**，添加并勾选运行本程序的宿主：
-- **.app 方式** → 勾选 **Podcast Desktop Lyrics**（推荐，最干净）
+- **下载 / 构建的 .app** → 勾选 **Podcast Desktop Lyrics**（推荐，最干净）
 - 从终端运行 → 勾选你的**终端**（Terminal / iTerm）
 - 开机自启脚本 → 勾选安装脚本里提示的 **python3 路径**
 
@@ -140,6 +137,10 @@ bash scripts/uninstall.sh
 版本失效时，欢迎运行 `python3 scripts/ax_probe.py > ax_dump.txt` 把 AX 结构
 dump 出来附在 issue 里一起反馈。
 
-## 📄 License
+## 📄 License / 致谢
 
-[MIT](LICENSE)
+本项目采用 [MIT](LICENSE)。
+
+下载版 .app 内嵌了 [`media-control`](https://github.com/ungive/mediaremote-adapter)
+（BSD 3-Clause，Copyright © 2025 Jonas van den Berg）用于读取"正在播放"信息，
+仅原样打包、未作修改。

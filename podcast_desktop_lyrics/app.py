@@ -61,7 +61,7 @@ from AppKit import (
     NSWindowCollectionBehaviorFullScreenAuxiliary, NSWindowStyleMaskBorderless,
     NSWindowStyleMaskNonactivatingPanel,
 )
-from Foundation import NSObject, NSTimer
+from Foundation import NSBundle, NSObject, NSTimer
 
 PODCAST_GROUP = os.path.expanduser(
     "~/Library/Group Containers/243LU875E5.groups.com.apple.podcasts"
@@ -231,9 +231,20 @@ class PositionSource:
 
     @classmethod
     def _resolve(cls, name):
+        # 1) 打包进 .app 的副本: Contents/Resources/<name>/bin/<name>
+        try:
+            res = NSBundle.mainBundle().resourcePath()
+            if res:
+                cand = os.path.join(str(res), name, "bin", name)
+                if os.path.exists(cand):
+                    return cand
+        except Exception:
+            pass
+        # 2) PATH
         p = shutil.which(name)
         if p:
             return p
+        # 3) 常见 brew 安装目录
         for d in cls._BIN_DIRS:
             cand = os.path.join(d, name)
             if os.path.exists(cand):
