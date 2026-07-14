@@ -134,17 +134,6 @@ bash scripts/uninstall.sh
 
 ---
 
-## 🗺 Roadmap
-
-- [x] 打包成独立 `.app`（免终端、辅助功能授权更顺）—— 见 `scripts/build_app.sh`
-- [ ] 给 `.app` 做签名 / 公证，并附上图标
-- [ ] 悬浮窗外观设置（字号 / 透明度 / 颜色 / 位置记忆）
-- [ ] 同时显示上一句 / 下一句
-- [ ] 可选：把广告断点校准点持久化，改善纯顺延精度
-- [ ] 兼容更多 macOS 版本 / 语言的 AX 文案
-
----
-
 ## 🤝 贡献 / Contributing
 
 欢迎 issue 和 PR。这个项目重度依赖 Apple 未公开的实现细节，遇到某个 macOS

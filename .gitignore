@@ -14,3 +14,6 @@ venv/
 # 本地缓存的调试用 TTML / dump
 *.ttml
 ax_dump.txt
+
+# 本地私有文件(不公开)
+*.local.md
