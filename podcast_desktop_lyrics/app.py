@@ -220,6 +220,7 @@ class PositionSource:
         self.db_value = None          # 最近一次从 DB 读到的 ZPLAYHEAD
         self.db_anchor_mono = 0.0     # 该值"发生变化"时的 monotonic 时刻
         self.audio_dur = None         # 该集音频时长(秒), 用于比例校正
+        self.playing = True           # 是否正在播放(暂停时停止外推)
         self.last_meta_poll = 0.0
         self.last_db_poll = 0.0
 
@@ -246,6 +247,8 @@ class PositionSource:
                     self.episode_id = data.get("uniqueIdentifier")
                     self.title = data.get("title")
                     self.pid = data.get("processIdentifier")
+                    # 暂停时 media-control 会立即把 playbackRate 变 0, 用它判断播放状态
+                    self.playing = (data.get("playbackRate") or 0) > 0
         except Exception:
             pass
 
@@ -287,7 +290,9 @@ class PositionSource:
                 self.db_anchor_mono = now  # 只在真正变化时重设锚点
         if self.db_value is None:
             return 0.0
-        # 从上次变化时刻起外推, 但封顶, 避免暂停时无限前冲
+        # 播放时从上次变化时刻起外推(封顶); 暂停时直接冻结在最后的进度, 不再前冲
+        if not self.playing:
+            return self.db_value
         return self.db_value + min(now - self.db_anchor_mono, self.MAX_EXTRAP)
 
 
@@ -513,7 +518,8 @@ class LyricsApp(NSObject):
             self._set_text(text)
         if self.calibrated:
             tail = f" {self.offset:+.0f}s" if abs(self.offset) >= 0.5 else ""
-            self.info.setStringValue_("○ 顺延" + tail)
+            state = "○ 暂停" if not self.source.playing else "○ 顺延"
+            self.info.setStringValue_(state + tail)
         else:
             # 还没被 AX 校准过, 顺延会不准 —— 提示打开一次逐字稿
             self.info.setStringValue_("打开一次逐字稿以校准")

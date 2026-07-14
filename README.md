@@ -11,6 +11,7 @@ _Show Apple Podcasts transcripts as a floating, karaoke-style "desktop lyrics" o
 
 - 🎯 **与播客 App 完全一致的实时精度** —— 直接镜像 Apple 逐字稿里当前高亮的那句
 - 🌊 **面板关掉也能顺延** —— 用播放进度继续往下走，再开面板自动重新校准
+- ⏸ **暂停同步暂停** —— 播客一停，字幕立刻定住，不会继续往前冲
 - 🪟 悬浮窗置顶、无边框、可拖动，**长句自动撑高**、跨所有桌面/全屏
 - 🈶 正确处理 Apple 逐字稿的逐词 span（补空格）、逐句切分
 - 🎧 自动识别"正在播放哪一集"，多份缓存也不会串台
@@ -134,7 +135,8 @@ bash scripts/uninstall.sh
 ## 🤝 贡献 / Contributing
 
 欢迎 issue 和 PR。这个项目重度依赖 Apple 未公开的实现细节，遇到某个 macOS
-版本失效时，欢迎附上 `scripts` 里的探测输出一起反馈。
+版本失效时，欢迎运行 `python3 scripts/ax_probe.py > ax_dump.txt` 把 AX 结构
+dump 出来附在 issue 里一起反馈。
 
 ## 📄 License
 
